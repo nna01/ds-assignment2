@@ -24,13 +24,13 @@ set.seed(100)
 ```
 
 ```{r}
-f_csv <- read.csv("nasa93_subset.csv")
+#f_csv <- read.csv("nasa93_subset.csv")
 
 f_arff <- read.arff("nasa93.arff")
  
 # remove columns we don't need
 #f_csv  <- f_csv [-c(1:5,7:11)]
-#f_csv  <- f_csv [-c(1:6)]
+#f_csv  <- f_csv [-c(1:16, 17:23)]
 
 # convert Language (factor) to numeric
 #for
@@ -41,16 +41,16 @@ str(f_csv )
 ```
 
 ```{r}
-f_arff $forg <- as.numeric(f_arff $forg)
+f_arff $pcap <- as.numeric(f_arff $pcap)
 ```
 
 ```{r}
-f_arff  <- f_arff [-c(1:3,5:23)]
+f_arff  <- f_arff [-c(1:16, 18:23)]
 ```
 
 ```{r}
 # sample randomly from a log-normal()
-max(rlnorm(1e5, 0, 4))
+max(rlnorm(1e5, 0, 3))
 ```
 
 ```{r}
@@ -69,7 +69,11 @@ m0 <- ulam(
 ```
 
 ```{r}
-precis(m0)
+precis(m0,depth=2)
+```
+
+```{r}
+exp(6.44)
 ```
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, results='hide', fig.align='center'}
@@ -80,10 +84,31 @@ trankplot(m0)
 m1 <- ulam(
     alist(
         act_effort ~ poisson(lambda),
-        log(lambda) <- a_forg[forg], # each lang its own intercept
-        a_forg[forg] ~ normal(0, 3)
+        log(lambda) <- a_pcap[pcap], # each lang its own intercept
+        a_pcap[pcap] ~ normal(0, 3)
     ), data = f_arff, cores = 4, chains = 4, cmdstan = TRUE, log_lik = TRUE
 )
+```
+
+```{r}
+precis(m1,depth=2)
+```
+
+```{r}
+exp(5.85)
+
+```
+
+```{r}
+exp(6.82)
+```
+
+```{r}
+exp(6.52)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, results='hide', fig.align='center'}
+trankplot(m1)
 ```
 
 ```{r, message=FALSE, warning=FALSE, results='hide'}
@@ -91,21 +116,51 @@ postcheck(m1, window = 81)
 ```
 
 ```{r}
-var(f$Effort)
-mean(f$Effort)
+compare(m0,m1, func=LOO)
+```
+
+```{r}
+#confidence interval
+10677.8 + c(-1,1) * 1.96 * 8784.84	
+```
+
+```{r}
+plot(precis(m1, depth = 2, pars = "a_pcap"))
+```
+
+```{r}
+post <- extract.samples(m1)
+
+```
+
+```{r}
+str(post)
+```
+
+```{r}
+#difference 
+dens(post$a_pcap[,2] - post$a_pcap[,1])
+```
+
+```{r}
+table(sign(post$a_pcap[,3] - post$a_pcap[,1]))
 ```
 
 ```{r, m2, message=FALSE, warning=FALSE, results='hide'}
 m2 <- ulam(
     alist(
         act_effort ~ dgampois(lambda, phi), # phi to model variance
-        log(lambda) <- a_forg[forg],
-        a_forg[forg] ~ normal(0, 3),
+        log(lambda) <- a_pcap[pcap],
+        a_pcap[pcap] ~ normal(0, 3),
         phi ~ exponential(1) # prior on the variance component phi
     ), data = f_arff, cores = 4, chains = 4, cmdstan = TRUE, log_lik = TRUE,
     control = list(adapt_delta=0.95)
 )
 
+```
+
+```{r}
+precis(m2,depth=2)
 ```
 
 ```{r}
@@ -122,5 +177,5 @@ loo_est[2,3] + c(-1,1) * loo_est[2,4] * 1.96
 ```
 
 ```{r}
-plot(precis(m2, depth = 2, pars = "a_forg", prob = 0.95))
+plot(precis(m2, depth = 2, pars = "a_pcap", prob = 0.95))
 ```
