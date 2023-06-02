@@ -4,7 +4,9 @@ output: html_document
 date: "2023-06-02"
 ---
 
-```{r setup, include=FALSE}
+Data Cleaning
+
+{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(cache = TRUE)
 
@@ -21,44 +23,42 @@ library(here) # make sure working dir is the same all the time
 library(posterior)
 library(bayesplot)
 set.seed(100)
-```
 
-```{r}
+{r}
 #f_csv <- read.csv("nasa93_subset.csv")
 
 f_arff <- read.arff("nasa93.arff")
  
 # remove columns we don't need
-#f_csv  <- f_csv [-c(1:5,7:11)]
-#f_csv  <- f_csv [-c(1:16, 17:23)]
+
 
 # convert Language (factor) to numeric
-#for
+
 
 str(f_csv )
 
 
-```
 
-```{r}
+{r}
 f_arff $pcap <- as.numeric(f_arff $pcap)
-```
 
-```{r}
-f_arff  <- f_arff [-c(1:16, 18:23)]
-```
+{r}
+f_arff $cplx <- as.numeric(f_arff $cplx)
 
-```{r}
+{r}
+f_arff  <- f_arff [-c(1:9, 11:16, 18:23)]
+
+M0 Model
+
+{r}
 # sample randomly from a log-normal()
 max(rlnorm(1e5, 0, 3))
-```
 
-```{r}
+{r}
 # sample randomly from a log-normal()
 max(rlnorm(1e5, 0, 10))
-```
 
-```{r m0, message=FALSE, warning=FALSE, results='hide'}
+{r m0, message=FALSE, warning=FALSE, results='hide'}
 m0 <- ulam(
   alist(
     act_effort ~ poisson(lambda),
@@ -66,21 +66,19 @@ m0 <- ulam(
     alpha ~ normal(0, 3)
   ), data = f_arff, cores = 4, chains = 4, cmdstan = TRUE, log_lik = TRUE, iter = 5e3
 )
-```
 
-```{r}
+{r}
 precis(m0,depth=2)
-```
 
-```{r}
+{r}
 exp(6.44)
-```
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, results='hide', fig.align='center'}
+{r, echo=FALSE, warning=FALSE, message=FALSE, results='hide', fig.align='center'}
 trankplot(m0)
-```
 
-```{r m1, message=FALSE, warning=FALSE, results='hide'}
+M1 Model
+
+{r m1, message=FALSE, warning=FALSE, results='hide'}
 m1 <- ulam(
     alist(
         act_effort ~ poisson(lambda),
@@ -88,65 +86,53 @@ m1 <- ulam(
         a_pcap[pcap] ~ normal(0, 3)
     ), data = f_arff, cores = 4, chains = 4, cmdstan = TRUE, log_lik = TRUE
 )
-```
 
-```{r}
+{r}
 precis(m1,depth=2)
-```
 
-```{r}
+{r}
 exp(5.85)
 
-```
 
-```{r}
+{r}
 exp(6.82)
-```
 
-```{r}
+{r}
 exp(6.52)
-```
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, results='hide', fig.align='center'}
+{r, echo=FALSE, warning=FALSE, message=FALSE, results='hide', fig.align='center'}
 trankplot(m1)
-```
 
-```{r, message=FALSE, warning=FALSE, results='hide'}
+{r, message=FALSE, warning=FALSE, results='hide'}
 postcheck(m1, window = 81)
-```
 
-```{r}
+{r}
 compare(m0,m1, func=LOO)
-```
 
-```{r}
+{r}
 #confidence interval
 10677.8 + c(-1,1) * 1.96 * 8784.84	
-```
 
-```{r}
+{r}
 plot(precis(m1, depth = 2, pars = "a_pcap"))
-```
 
-```{r}
+{r}
 post <- extract.samples(m1)
 
-```
 
-```{r}
+{r}
 str(post)
-```
 
-```{r}
+{r}
 #difference 
 dens(post$a_pcap[,2] - post$a_pcap[,1])
-```
 
-```{r}
+{r}
 table(sign(post$a_pcap[,3] - post$a_pcap[,1]))
-```
 
-```{r, m2, message=FALSE, warning=FALSE, results='hide'}
+M2 Model
+
+{r, m2, message=FALSE, warning=FALSE, results='hide'}
 m2 <- ulam(
     alist(
         act_effort ~ dgampois(lambda, phi), # phi to model variance
@@ -157,25 +143,20 @@ m2 <- ulam(
     control = list(adapt_delta=0.95)
 )
 
-```
 
-```{r}
+{r}
 precis(m2,depth=2)
-```
 
-```{r}
+{r}
 postcheck(m2, window=81)
-```
 
-```{r loo, warning=FALSE, message=FALSE, fig.align='center'}
+{r loo, warning=FALSE, message=FALSE, fig.align='center'}
 (loo_est <- compare(m0, m1, m2, func=LOO))
-```
 
-```{r}
+{r}
 loo_est[2,3] + c(-1,1) * loo_est[2,4] * 1.96
 
-```
 
-```{r}
+{r}
 plot(precis(m2, depth = 2, pars = "a_pcap", prob = 0.95))
-```
+
